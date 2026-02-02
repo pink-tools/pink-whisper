@@ -1,13 +1,13 @@
 package daemon
 
 import (
-	"bufio"
 	"context"
 	"fmt"
 	"io"
+	"net"
 	"os/exec"
 	"path/filepath"
-	"strings"
+	"time"
 
 	"github.com/pink-tools/pink-core"
 	"github.com/pink-tools/pink-otel"
@@ -27,31 +27,24 @@ func Run(ctx context.Context) error {
 	cmd := exec.Command(binary, model)
 	cmd.Dir = dir
 	cmd.Stdout = io.Discard
+	cmd.Stderr = io.Discard
 	setProcessGroup(cmd)
-
-	stderr, err := cmd.StderrPipe()
-	if err != nil {
-		return fmt.Errorf("stderr pipe: %w", err)
-	}
 
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("start whisper server: %w", err)
 	}
 
-	// Wait for "listening on port" message, then discard rest
-	ready := make(chan struct{})
-	go func() {
-		scanner := bufio.NewScanner(stderr)
-		for scanner.Scan() {
-			if strings.Contains(scanner.Text(), "listening on port") {
-				close(ready)
-				io.Copy(io.Discard, stderr)
-				return
-			}
+	// Wait for port to be open
+	addr := "127.0.0.1:7465"
+	for i := 0; i < 120; i++ {
+		conn, err := net.DialTimeout("tcp", addr, 100*time.Millisecond)
+		if err == nil {
+			conn.Close()
+			break
 		}
-	}()
+		time.Sleep(500 * time.Millisecond)
+	}
 
-	<-ready
 	otel.Info(ctx, "whisper ready", otel.Attr{"port", "7465"})
 
 	done := make(chan error, 1)
