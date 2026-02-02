@@ -79,6 +79,17 @@ func confirmInstall(info installer.InstallInfo) bool {
 		return true
 	}
 
+	// Try GUI dialog via orchestrator IPC
+	if core.IsOrchestratorRunning() {
+		dialogJSON, _ := json.Marshal(info.Dialog)
+		result, err := core.ShowDialog(string(dialogJSON))
+		if err == nil {
+			return result == "confirm"
+		}
+		// Fallback to CLI if IPC fails
+	}
+
+	// CLI fallback
 	fmt.Println()
 	fmt.Println(info.Dialog.Message)
 	fmt.Println()
