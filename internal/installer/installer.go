@@ -46,33 +46,42 @@ func Check() InstallInfo {
 		ModelSize: modelSize,
 	}
 
-	if !hardware.IsSupported() {
-		info.NeedConfirm = true
-		info.Dialog = &Dialog{
-			Title:         "pink-whisper",
-			Message:       fmt.Sprintf("Platform not supported: %s/%s\n\nRemote server (transcribe.pinkhaired.com) works automatically.", runtime.GOOS, runtime.GOARCH),
-			ConfirmButton: "",
-			CancelButton:  "OK",
-		}
-		return info
-	}
-
 	dir := core.DataDir("pink-whisper")
 	binaryPath := filepath.Join(dir, ServerBinaryName())
 	modelPath := filepath.Join(dir, "ggml-large-v3.bin")
 
 	if fileExists(binaryPath) && fileExists(modelPath) {
 		info.Ready = true
+		return info
+	}
+
+	// Show confirmation dialog for CPU (slow) hardware
+	if !hardware.IsFast() {
+		info.NeedConfirm = true
+		info.Dialog = &Dialog{
+			Title: "pink-whisper",
+			Message: fmt.Sprintf(`No GPU acceleration detected.
+
+Hardware: %s
+
+LOCAL SERVER (CPU):
+- Very slow transcription (10-30x realtime)
+- Downloads ~3GB model
+- Uses significant CPU/RAM
+
+REMOTE SERVER (transcribe.pinkhaired.com):
+- Fast transcription (GPU accelerated)
+- No local installation needed
+- Works automatically with pink-transcriber`, hardware.Description()),
+			ConfirmButton: "Install locally",
+			CancelButton:  "Use remote (recommended)",
+		}
 	}
 
 	return info
 }
 
 func Install(info InstallInfo) error {
-	if !hardware.IsSupported() {
-		return fmt.Errorf("platform not supported: %s/%s", runtime.GOOS, runtime.GOARCH)
-	}
-
 	dir := core.DataDir("pink-whisper")
 
 	fmt.Printf("Downloading %s...\n", info.Artifact)

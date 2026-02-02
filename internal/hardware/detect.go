@@ -8,9 +8,9 @@ import (
 type Type string
 
 const (
-	CoreML      Type = "coreml"
-	CUDA        Type = "cuda"
-	Unsupported Type = "unsupported"
+	CoreML Type = "coreml"
+	CUDA   Type = "cuda"
+	CPU    Type = "cpu"
 )
 
 var detected Type
@@ -23,8 +23,8 @@ func Get() Type {
 	return detected
 }
 
-func IsSupported() bool {
-	return detected != Unsupported
+func IsFast() bool {
+	return detected == CoreML || detected == CUDA
 }
 
 func detect() Type {
@@ -38,8 +38,13 @@ func detect() Type {
 		return CUDA
 	}
 
-	// Everything else → not supported (use remote server)
-	return Unsupported
+	// Windows/Linux → CPU (slow, but supported)
+	if runtime.GOOS == "windows" || runtime.GOOS == "linux" {
+		return CPU
+	}
+
+	// Intel Mac and other platforms → CPU
+	return CPU
 }
 
 func ArtifactName() string {
@@ -52,7 +57,10 @@ func ArtifactName() string {
 		}
 		return "linux-amd64-cuda.tar.gz"
 	default:
-		return ""
+		if runtime.GOOS == "windows" {
+			return "windows-amd64-cpu.zip"
+		}
+		return "linux-amd64-cpu.tar.gz"
 	}
 }
 
@@ -63,6 +71,6 @@ func Description() string {
 	case CUDA:
 		return "NVIDIA GPU (CUDA)"
 	default:
-		return "no GPU acceleration"
+		return "CPU (no GPU acceleration)"
 	}
 }
