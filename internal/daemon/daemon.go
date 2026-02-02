@@ -20,11 +20,19 @@ func Run(ctx context.Context) error {
 	dir := core.DataDir("pink-whisper")
 	binary := filepath.Join(dir, installer.ServerBinaryName())
 	model := filepath.Join(dir, "ggml-large-v3.bin")
+	logFile := filepath.Join(dir, "whisper.log")
+
+	// Open log file for whisper server output
+	log, err := os.OpenFile(logFile, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+	if err != nil {
+		return fmt.Errorf("create log file: %w", err)
+	}
+	defer log.Close()
 
 	cmd := exec.CommandContext(ctx, binary, model)
 	cmd.Dir = dir
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	cmd.Stdout = log
+	cmd.Stderr = log
 
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("start whisper server: %w", err)
