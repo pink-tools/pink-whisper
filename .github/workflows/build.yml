@@ -11,46 +11,9 @@ on:
           - all
           - macos-coreml
           - windows-cuda
-          - windows-cpu
           - linux-cuda
-          - linux-cpu
 
 jobs:
-  build-linux-cpu:
-    if: ${{ inputs.job == 'all' || inputs.job == 'linux-cpu' }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          repository: ggml-org/whisper.cpp
-
-      - name: Download pink-whisper.cpp
-        run: |
-          mkdir -p examples/pink-whisper
-          curl -L -o examples/pink-whisper/pink-whisper.cpp \
-            "https://raw.githubusercontent.com/pink-tools/pink-whisper/main/src/pink-whisper.cpp"
-
-      - name: Add to CMake
-        run: |
-          echo 'add_executable(pink-whisper examples/pink-whisper/pink-whisper.cpp)' >> CMakeLists.txt
-          echo 'target_link_libraries(pink-whisper PRIVATE whisper)' >> CMakeLists.txt
-
-      - name: Build
-        run: |
-          cmake -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF
-          cmake --build build -j --target pink-whisper
-
-      - name: Prepare artifact
-        run: |
-          mkdir -p artifact
-          cp build/bin/pink-whisper artifact/
-          chmod +x artifact/pink-whisper
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: linux-amd64-cpu
-          path: artifact/
-
   build-linux-cuda:
     if: ${{ inputs.job == 'all' || inputs.job == 'linux-cuda' }}
     runs-on: ubuntu-latest
@@ -99,43 +62,6 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: linux-amd64-cuda
-          path: artifact/
-
-  build-windows-cpu:
-    if: ${{ inputs.job == 'all' || inputs.job == 'windows-cpu' }}
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          repository: ggml-org/whisper.cpp
-
-      - name: Download pink-whisper.cpp
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Force -Path examples/pink-whisper
-          Invoke-WebRequest -Uri "https://raw.githubusercontent.com/pink-tools/pink-whisper/main/src/pink-whisper.cpp" `
-            -OutFile examples/pink-whisper/pink-whisper.cpp
-
-      - name: Add to CMake
-        shell: pwsh
-        run: |
-          Add-Content CMakeLists.txt "`nadd_executable(pink-whisper examples/pink-whisper/pink-whisper.cpp)"
-          Add-Content CMakeLists.txt "target_link_libraries(pink-whisper PRIVATE whisper ws2_32)"
-
-      - name: Build
-        run: |
-          cmake -B build -DBUILD_SHARED_LIBS=OFF
-          cmake --build build --config Release --target pink-whisper
-
-      - name: Prepare artifact
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Force -Path artifact
-          Copy-Item build/bin/Release/pink-whisper.exe artifact/
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: windows-amd64-cpu
           path: artifact/
 
   build-windows-cuda:
@@ -269,93 +195,6 @@ jobs:
           name: darwin-arm64-coreml
           path: artifact/
 
-  test-linux:
-    if: ${{ inputs.job == 'all' || inputs.job == 'linux-cpu' }}
-    needs: build-linux-cpu
-    runs-on: ubuntu-latest
-    steps:
-      - name: Install ffmpeg
-        run: sudo apt-get update && sudo apt-get install -y ffmpeg
-
-      - uses: actions/download-artifact@v4
-        with:
-          name: linux-amd64-cpu
-          path: artifact/
-
-      - name: Download model
-        run: curl -L -o artifact/ggml-large-v3.bin https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3.bin
-
-      - name: Test
-        run: |
-          chmod +x artifact/pink-whisper
-          artifact/pink-whisper -m artifact/ggml-large-v3.bin -p 7465 &
-          for i in {1..120}; do nc -z 127.0.0.1 7465 && break; sleep 1; done
-          ffmpeg -f lavfi -i anullsrc=r=16000:cl=mono -t 1 -f s16le -acodec pcm_s16le /tmp/test.pcm -y
-          python3 -c "
-          import socket, struct
-          pcm = open('/tmp/test.pcm', 'rb').read()
-          sock = socket.create_connection(('127.0.0.1', 7465))
-          sock.send(struct.pack('<I', len(pcm)) + pcm)
-          size = struct.unpack('<I', sock.recv(4))[0]
-          text = sock.recv(size).decode()
-          print(f'Transcription: {text}')
-          "
-          pkill pink-whisper || true
-
-  test-windows:
-    if: ${{ inputs.job == 'all' || inputs.job == 'windows-cpu' }}
-    needs: build-windows-cpu
-    runs-on: windows-latest
-    steps:
-      - name: Install ffmpeg
-        run: choco install ffmpeg -y
-
-      - uses: actions/download-artifact@v4
-        with:
-          name: windows-amd64-cpu
-          path: artifact/
-
-      - name: Download model
-        shell: pwsh
-        run: Invoke-WebRequest -Uri "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3.bin" -OutFile artifact/ggml-large-v3.bin
-
-      - name: Test
-        shell: pwsh
-        run: |
-          $proc = Start-Process -FilePath artifact/pink-whisper.exe -ArgumentList "-m", "artifact/ggml-large-v3.bin", "-p", "7465" -PassThru
-          $connected = $false
-          for ($i = 0; $i -lt 180; $i++) {
-            if ($proc.HasExited) {
-              Write-Host "Server exited with code $($proc.ExitCode)"
-              exit 1
-            }
-            try {
-              $tcp = New-Object System.Net.Sockets.TcpClient("127.0.0.1", 7465)
-              $tcp.Close()
-              $connected = $true
-              Write-Host "Server ready after $i seconds"
-              break
-            } catch {
-              Start-Sleep -Seconds 1
-            }
-          }
-          if (-not $connected) {
-            Write-Host "Timeout waiting for server"
-            Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
-            exit 1
-          }
-          ffmpeg -f lavfi -i anullsrc=r=16000:cl=mono -t 1 -f s16le -acodec pcm_s16le test.pcm -y
-          python -c @"
-          import socket, struct
-          pcm = open('test.pcm', 'rb').read()
-          sock = socket.create_connection(('127.0.0.1', 7465))
-          sock.send(struct.pack('<I', len(pcm)) + pcm)
-          size = struct.unpack('<I', sock.recv(4))[0]
-          text = sock.recv(size).decode()
-          print(f'Transcription: {text}')
-          "@
-          Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
-
   test-macos:
     if: ${{ inputs.job == 'all' || inputs.job == 'macos-coreml' }}
     needs: build-macos-coreml
@@ -391,7 +230,7 @@ jobs:
 
   release:
     if: ${{ inputs.job == 'all' }}
-    needs: [build-linux-cuda, build-windows-cuda, test-linux, test-windows, test-macos]
+    needs: [build-linux-cuda, build-windows-cuda, test-macos]
     runs-on: ubuntu-latest
     permissions:
       contents: write
