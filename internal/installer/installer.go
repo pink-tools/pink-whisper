@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	releaseURL = "https://github.com/pink-tools/pink-whisper/releases/download/latest/"
+	releaseURL = "https://github.com/pink-tools/pink-whisper/releases/download/cpp-latest/"
 	modelURL   = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3.bin"
 	modelSize  = 3095033483 // ~3GB
 )
