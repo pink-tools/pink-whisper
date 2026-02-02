@@ -1,13 +1,16 @@
 package daemon
 
 import (
+	"bufio"
 	"context"
 	"fmt"
-	"os"
+	"io"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"github.com/pink-tools/pink-core"
+	"github.com/pink-tools/pink-otel"
 	"github.com/pink-tools/pink-whisper/internal/installer"
 )
 
@@ -20,23 +23,36 @@ func Run(ctx context.Context) error {
 	dir := core.DataDir("pink-whisper")
 	binary := filepath.Join(dir, installer.ServerBinaryName())
 	model := filepath.Join(dir, "ggml-large-v3.bin")
-	logFile := filepath.Join(dir, "whisper.log")
 
-	// Open log file for whisper server output
-	log, err := os.OpenFile(logFile, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
-	if err != nil {
-		return fmt.Errorf("create log file: %w", err)
-	}
-	defer log.Close()
-
-	cmd := exec.CommandContext(ctx, binary, model)
+	cmd := exec.Command(binary, model)
 	cmd.Dir = dir
-	cmd.Stdout = log
-	cmd.Stderr = log
+	cmd.Stdout = io.Discard
+	setProcessGroup(cmd)
+
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		return fmt.Errorf("stderr pipe: %w", err)
+	}
 
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("start whisper server: %w", err)
 	}
+
+	// Wait for "listening on port" message, then discard rest
+	ready := make(chan struct{})
+	go func() {
+		scanner := bufio.NewScanner(stderr)
+		for scanner.Scan() {
+			if strings.Contains(scanner.Text(), "listening on port") {
+				close(ready)
+				io.Copy(io.Discard, stderr)
+				return
+			}
+		}
+	}()
+
+	<-ready
+	otel.Info(ctx, "whisper ready", otel.Attr{"port", "7465"})
 
 	done := make(chan error, 1)
 	go func() {
@@ -45,9 +61,13 @@ func Run(ctx context.Context) error {
 
 	select {
 	case err := <-done:
-		return err
+		if err != nil {
+			return fmt.Errorf("whisper exited: %w", err)
+		}
+		return nil
 	case <-ctx.Done():
-		cmd.Process.Kill()
+		otel.Info(ctx, "stopping whisper")
+		gracefulKill(cmd)
 		return nil
 	}
 }
