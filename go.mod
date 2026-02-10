@@ -3,8 +3,8 @@ module github.com/pink-tools/pink-whisper
 go 1.25.4
 
 require (
-	github.com/pink-tools/pink-core v1.7.2
-	github.com/pink-tools/pink-otel v1.7.0
+	github.com/pink-tools/pink-core v1.8.0
+	github.com/pink-tools/pink-otel v1.8.0
 )
 
 require (
