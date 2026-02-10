@@ -75,44 +75,30 @@ std::string transcribe(const std::vector<float>& pcmf32) {
 }
 
 void handle_client(socket_t client) {
-    fprintf(stderr, "[debug] client connected\n");
-
-    // Read audio size (4 bytes, little-endian)
     uint32_t audio_size;
     if (!recv_all(client, &audio_size, 4)) {
-        fprintf(stderr, "[debug] failed to read size\n");
         CLOSE_SOCKET(client);
         return;
     }
-    fprintf(stderr, "[debug] audio size: %u bytes\n", audio_size);
 
-    // Read audio data (16-bit PCM, 16kHz mono)
     std::vector<int16_t> pcm16(audio_size / 2);
     if (!recv_all(client, pcm16.data(), audio_size)) {
-        fprintf(stderr, "[debug] failed to read audio\n");
         CLOSE_SOCKET(client);
         return;
     }
-    fprintf(stderr, "[debug] audio received, converting...\n");
 
-    // Convert to float32
     std::vector<float> pcmf32(pcm16.size());
     for (size_t i = 0; i < pcm16.size(); i++) {
         pcmf32[i] = (float)pcm16[i] / 32768.0f;
     }
 
-    // Transcribe
-    fprintf(stderr, "[debug] transcribing...\n");
     std::string text = transcribe(pcmf32);
-    fprintf(stderr, "[debug] done, sending %zu bytes\n", text.size());
 
-    // Send response
     uint32_t text_size = text.size();
     send_all(client, &text_size, 4);
     send_all(client, text.data(), text_size);
 
     CLOSE_SOCKET(client);
-    fprintf(stderr, "[debug] client done\n");
 }
 
 int main(int argc, char** argv) {
