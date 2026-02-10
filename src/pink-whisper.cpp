@@ -17,6 +17,7 @@ typedef SOCKET socket_t;
 #else
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <arpa/inet.h>
 #include <unistd.h>
 typedef int socket_t;
 #define CLOSE_SOCKET close
@@ -116,6 +117,7 @@ void handle_client(socket_t client) {
 
 int main(int argc, char** argv) {
     const char* model_path = "ggml-large-v3.bin";
+    const char* bind_addr = "127.0.0.1";
     int port = 7465;
 
     for (int i = 1; i < argc; i++) {
@@ -123,6 +125,8 @@ int main(int argc, char** argv) {
             model_path = argv[++i];
         } else if (strcmp(argv[i], "-p") == 0 && i + 1 < argc) {
             port = atoi(argv[++i]);
+        } else if (strcmp(argv[i], "-b") == 0 && i + 1 < argc) {
+            bind_addr = argv[++i];
         }
     }
 
@@ -156,7 +160,10 @@ int main(int argc, char** argv) {
 
     sockaddr_in addr{};
     addr.sin_family = AF_INET;
-    addr.sin_addr.s_addr = INADDR_ANY;
+    if (inet_pton(AF_INET, bind_addr, &addr.sin_addr) != 1) {
+        fprintf(stderr, "pink-whisper: invalid bind address: %s\n", bind_addr);
+        return 1;
+    }
     addr.sin_port = htons(port);
 
     if (bind(server, (sockaddr*)&addr, sizeof(addr)) == SOCKET_ERROR) {
@@ -169,7 +176,7 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    fprintf(stderr, "pink-whisper: listening on port %d\n", port);
+    fprintf(stderr, "pink-whisper: listening on %s:%d\n", bind_addr, port);
 
     while (true) {
         socket_t client = accept(server, nullptr, nullptr);
