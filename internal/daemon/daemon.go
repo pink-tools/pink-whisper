@@ -45,7 +45,7 @@ func Run(ctx context.Context) error {
 		time.Sleep(500 * time.Millisecond)
 	}
 
-	log.Info(ctx, "whisper ready", log.Attr{"port", "7465"})
+	log.Info(ctx, "whisper ready", log.Attr{K: "port", V: "7465"})
 
 	done := make(chan error, 1)
 	go func() {
