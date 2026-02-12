@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/pink-tools/pink-core"
-	"github.com/pink-tools/pink-otel"
+	"github.com/pink-tools/pink-core/log"
 	"github.com/pink-tools/pink-whisper/internal/installer"
 )
 
@@ -45,7 +45,7 @@ func Run(ctx context.Context) error {
 		time.Sleep(500 * time.Millisecond)
 	}
 
-	otel.Info(ctx, "whisper ready", otel.Attr{"port", "7465"})
+	log.Info(ctx, "whisper ready", log.Attr{"port", "7465"})
 
 	done := make(chan error, 1)
 	go func() {
@@ -59,7 +59,7 @@ func Run(ctx context.Context) error {
 		}
 		return nil
 	case <-ctx.Done():
-		otel.Info(ctx, "stopping whisper")
+		log.Info(ctx, "stopping whisper")
 		gracefulKill(cmd)
 		return nil
 	}
