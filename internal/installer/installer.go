@@ -122,21 +122,34 @@ func fileExists(path string) bool {
 }
 
 func download(url, dest string) error {
-	resp, err := http.Get(url)
+	tmpFile := dest + ".tmp"
+
+	client := &http.Client{
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return nil
+		},
+	}
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36")
+
+	resp, err := client.Do(req)
 	if err != nil {
 		return err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		return fmt.Errorf("HTTP %d", resp.StatusCode)
+		return fmt.Errorf("HTTP %d %s (url: %s)", resp.StatusCode, http.StatusText(resp.StatusCode), url)
 	}
 
-	f, err := os.Create(dest)
+	out, err := os.Create(tmpFile)
 	if err != nil {
 		return err
 	}
-	defer f.Close()
 
 	total := resp.ContentLength
 	var downloaded int64
@@ -146,8 +159,11 @@ func download(url, dest string) error {
 	for {
 		n, readErr := resp.Body.Read(buf)
 		if n > 0 {
-			if _, err := f.Write(buf[:n]); err != nil {
-				return err
+			_, writeErr := out.Write(buf[:n])
+			if writeErr != nil {
+				out.Close()
+				os.Remove(tmpFile)
+				return writeErr
 			}
 			downloaded += int64(n)
 			if total > 0 {
@@ -162,9 +178,24 @@ func download(url, dest string) error {
 			break
 		}
 		if readErr != nil {
+			out.Close()
+			os.Remove(tmpFile)
 			return readErr
 		}
 	}
+
+	out.Close()
+
+	if total > 0 && downloaded != total {
+		os.Remove(tmpFile)
+		return fmt.Errorf("incomplete download: got %d bytes, expected %d", downloaded, total)
+	}
+
+	if err := os.Rename(tmpFile, dest); err != nil {
+		os.Remove(tmpFile)
+		return fmt.Errorf("failed to finalize download: %w", err)
+	}
+
 	return nil
 }
 
