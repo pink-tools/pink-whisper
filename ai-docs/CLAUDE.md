@@ -164,7 +164,7 @@ curl -L -o ggml-large-v3.bin \
 ## CLI
 
 ```bash
-./pink-whisper [-m MODEL] [-p PORT]
+./whisper-server [-m MODEL] [-p PORT]
 ```
 
 | Flag | Default | Description |

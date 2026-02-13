@@ -15,7 +15,7 @@ Model: [ggml-large-v3.bin](https://huggingface.co/ggerganov/whisper.cpp/resolve/
 ## Structure
 
 ```
-pink-whisper              # binary
+whisper-server            # binary
 ggml-large-v3.bin         # model
 ggml-large-v3-encoder.mlmodelc/  # macOS only
 libcublas*.so / cublas*.dll      # CUDA only

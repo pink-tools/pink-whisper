@@ -9,7 +9,7 @@ Download binary from [Releases](https://github.com/pink-tools/pink-whisper/relea
 ## Usage
 
 ```bash
-./pink-whisper -m ggml-large-v3.bin -p 7465
+./whisper-server -m ggml-large-v3.bin -p 7465
 ```
 
 Options:
