@@ -96,6 +96,9 @@ func Install(info InstallInfo) error {
 	}
 	os.Remove(artifactPath)
 
+	// Ensure server binary is executable (tar may not preserve permissions)
+	os.Chmod(filepath.Join(dir, ServerBinaryName()), 0755)
+
 	modelPath := filepath.Join(dir, "ggml-large-v3.bin")
 	if !fileExists(modelPath) {
 		fmt.Printf("Downloading model (~3GB)...\n")
