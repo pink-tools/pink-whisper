@@ -96,13 +96,6 @@ func Install(info InstallInfo) error {
 	}
 	os.Remove(artifactPath)
 
-	// Rename extracted binary to whisper-server (avoid conflict with Go wrapper)
-	oldName := filepath.Join(dir, cppBinaryName())
-	newName := filepath.Join(dir, ServerBinaryName())
-	if fileExists(oldName) && oldName != newName {
-		os.Rename(oldName, newName)
-	}
-
 	modelPath := filepath.Join(dir, "ggml-large-v3.bin")
 	if !fileExists(modelPath) {
 		fmt.Printf("Downloading model (~3GB)...\n")
@@ -121,14 +114,6 @@ func ServerBinaryName() string {
 		return "whisper-server.exe"
 	}
 	return "whisper-server"
-}
-
-// cppBinaryName returns the original C++ binary name from the archive
-func cppBinaryName() string {
-	if runtime.GOOS == "windows" {
-		return "pink-whisper.exe"
-	}
-	return "pink-whisper"
 }
 
 func fileExists(path string) bool {
@@ -153,8 +138,47 @@ func download(url, dest string) error {
 	}
 	defer f.Close()
 
-	_, err = io.Copy(f, resp.Body)
-	return err
+	total := resp.ContentLength
+	var downloaded int64
+	var lastPct int
+	buf := make([]byte, 32*1024)
+
+	for {
+		n, readErr := resp.Body.Read(buf)
+		if n > 0 {
+			if _, err := f.Write(buf[:n]); err != nil {
+				return err
+			}
+			downloaded += int64(n)
+			if total > 0 {
+				pct := int(float64(downloaded) / float64(total) * 100)
+				if pct >= lastPct+5 || pct == 100 {
+					fmt.Printf("%d%% (%s / %s)\n", pct, formatBytes(downloaded), formatBytes(total))
+					lastPct = pct
+				}
+			}
+		}
+		if readErr == io.EOF {
+			break
+		}
+		if readErr != nil {
+			return readErr
+		}
+	}
+	return nil
+}
+
+func formatBytes(b int64) string {
+	const unit = 1024
+	if b < unit {
+		return fmt.Sprintf("%d B", b)
+	}
+	div, exp := int64(unit), 0
+	for n := b / unit; n >= unit; n /= unit {
+		div *= unit
+		exp++
+	}
+	return fmt.Sprintf("%.1f %cB", float64(b)/float64(div), "KMGTPE"[exp])
 }
 
 func extract(archive, dest string) error {
