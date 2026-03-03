@@ -14,7 +14,7 @@ import (
 var version = "dev"
 
 func main() {
-	core.Run(core.Config{
+	cfg := core.Config{
 		Name:    "pink-whisper",
 		Version: version,
 		Commands: map[string]core.Command{
@@ -31,7 +31,9 @@ func main() {
 				Run:  cmdInstall,
 			},
 		},
-	}, daemon.Run)
+	}
+	core.HandleActions(&cfg, nil, nil)
+	core.Run(cfg, daemon.Run)
 }
 
 func cmdStop(args []string) error {

@@ -2,7 +2,7 @@ module github.com/pink-tools/pink-whisper
 
 go 1.25.4
 
-require github.com/pink-tools/pink-core v1.8.3
+require github.com/pink-tools/pink-core v1.9.0
 
 require (
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
