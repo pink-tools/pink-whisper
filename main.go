@@ -1,6 +1,7 @@
 package main
 
 import (
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -11,12 +12,16 @@ import (
 	"github.com/pink-tools/pink-whisper/internal/installer"
 )
 
+//go:embed context.md
+var claudeContext string
+
 var version = "dev"
 
 func main() {
 	cfg := core.Config{
 		Name:    "pink-whisper",
 		Version: version,
+		Context: claudeContext,
 		Commands: map[string]core.Command{
 			"stop": {
 				Desc: "Stop whisper server",

@@ -46,9 +46,8 @@ func Check() InstallInfo {
 		ModelSize: modelSize,
 	}
 
-	dir := core.DataDir("pink-whisper")
-	binaryPath := filepath.Join(dir, ServerBinaryName())
-	modelPath := filepath.Join(dir, "ggml-large-v3.bin")
+	binaryPath := filepath.Join(core.ServiceDir("pink-whisper"), ServerBinaryName())
+	modelPath := filepath.Join(core.AppDataDir("pink-whisper"), "ggml-large-v3.bin")
 
 	if fileExists(binaryPath) && fileExists(modelPath) {
 		info.Ready = true
@@ -82,24 +81,25 @@ REMOTE SERVER (transcribe.pinkhaired.com):
 }
 
 func Install(info InstallInfo) error {
-	dir := core.DataDir("pink-whisper")
+	binDir := core.ServiceDir("pink-whisper")
+	dataDir := core.AppDataDir("pink-whisper")
 
 	fmt.Printf("Downloading %s...\n", info.Artifact)
-	artifactPath := filepath.Join(dir, info.Artifact)
+	artifactPath := filepath.Join(binDir, info.Artifact)
 	if err := download(releaseURL+info.Artifact, artifactPath); err != nil {
 		return fmt.Errorf("download artifact: %w", err)
 	}
 
 	fmt.Println("Extracting...")
-	if err := extract(artifactPath, dir); err != nil {
+	if err := extract(artifactPath, binDir); err != nil {
 		return fmt.Errorf("extract: %w", err)
 	}
 	os.Remove(artifactPath)
 
 	// Ensure server binary is executable (tar may not preserve permissions)
-	os.Chmod(filepath.Join(dir, ServerBinaryName()), 0755)
+	os.Chmod(filepath.Join(binDir, ServerBinaryName()), 0755)
 
-	modelPath := filepath.Join(dir, "ggml-large-v3.bin")
+	modelPath := filepath.Join(dataDir, "ggml-large-v3.bin")
 	if !fileExists(modelPath) {
 		fmt.Printf("Downloading model (~3GB)...\n")
 		if err := download(modelURL, modelPath); err != nil {

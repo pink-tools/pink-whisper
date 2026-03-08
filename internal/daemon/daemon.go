@@ -20,12 +20,12 @@ func Run(ctx context.Context) error {
 		return fmt.Errorf("not installed, run: pink-whisper install")
 	}
 
-	dir := core.DataDir("pink-whisper")
-	binary := filepath.Join(dir, installer.ServerBinaryName())
-	model := filepath.Join(dir, "ggml-large-v3.bin")
+	binDir := core.ServiceDir("pink-whisper")
+	binary := filepath.Join(binDir, installer.ServerBinaryName())
+	model := filepath.Join(core.AppDataDir("pink-whisper"), "ggml-large-v3.bin")
 
 	cmd := exec.Command(binary, model)
-	cmd.Dir = dir
+	cmd.Dir = binDir
 	cmd.Stdout = io.Discard
 	cmd.Stderr = io.Discard
 	setProcessGroup(cmd)
