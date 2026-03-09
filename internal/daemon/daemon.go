@@ -22,9 +22,8 @@ func Run(ctx context.Context) error {
 
 	binDir := core.ServiceDir("pink-whisper")
 	binary := filepath.Join(binDir, installer.ServerBinaryName())
-	model := filepath.Join(core.AppDataDir("pink-whisper"), "ggml-large-v3.bin")
 
-	cmd := exec.Command(binary, model)
+	cmd := exec.Command(binary, "-m", installer.ModelPath())
 	cmd.Dir = binDir
 	cmd.Stdout = io.Discard
 	cmd.Stderr = io.Discard
@@ -36,13 +35,21 @@ func Run(ctx context.Context) error {
 
 	// Wait for port to be open
 	addr := "127.0.0.1:7465"
-	for i := 0; i < 120; i++ {
+	for i := 0; i < 120 && ctx.Err() == nil; i++ {
 		conn, err := net.DialTimeout("tcp", addr, 100*time.Millisecond)
 		if err == nil {
 			conn.Close()
 			break
 		}
-		time.Sleep(500 * time.Millisecond)
+		select {
+		case <-ctx.Done():
+		case <-time.After(500 * time.Millisecond):
+		}
+	}
+
+	if ctx.Err() != nil {
+		gracefulKill(cmd)
+		return nil
 	}
 
 	log.Info(ctx, "whisper ready", log.Attr{K: "port", V: "7465"})
