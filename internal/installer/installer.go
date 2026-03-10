@@ -109,7 +109,9 @@ func Install(info InstallInfo) error {
 	os.Remove(artifactPath)
 
 	// Ensure server binary is executable (tar may not preserve permissions)
-	os.Chmod(filepath.Join(binDir, ServerBinaryName()), 0755)
+	if err := os.Chmod(filepath.Join(binDir, ServerBinaryName()), 0755); err != nil {
+		return fmt.Errorf("chmod server binary: %w", err)
+	}
 
 	modelPath := ModelPath()
 	if !fileExists(modelPath) {
