@@ -55,6 +55,10 @@ func cmdStatus(args []string) error {
 }
 
 func cmdInstall(args []string) error {
+	if hasFlag(args, "--describe") {
+		return nil
+	}
+
 	check := hasFlag(args, "--check")
 	yes := hasFlag(args, "--yes")
 
@@ -86,22 +90,10 @@ func confirmInstall(info installer.InstallInfo) bool {
 		return true
 	}
 
-	// Try GUI dialog via orchestrator IPC
-	if core.IsOrchestratorRunning() {
-		dialogJSON, _ := json.Marshal(info.Dialog)
-		result, err := core.ShowDialog(string(dialogJSON))
-		if err == nil {
-			return result == "confirm"
-		}
-		// Fallback to CLI if IPC fails
-	}
-
-	// CLI fallback
 	fmt.Println()
 	fmt.Println(info.Dialog.Message)
 	fmt.Println()
 
-	// No confirm button means platform not supported
 	if info.Dialog.ConfirmButton == "" {
 		fmt.Printf("[%s]\n", info.Dialog.CancelButton)
 		return false
