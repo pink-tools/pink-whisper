@@ -1,13 +1,13 @@
 package daemon
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"io"
-	"net"
 	"os/exec"
 	"path/filepath"
-	"time"
+	"strings"
 
 	"github.com/pink-tools/pink-core"
 	"github.com/pink-tools/pink-core/log"
@@ -28,28 +28,34 @@ func Run(ctx context.Context) error {
 	cmd := exec.Command(binary, "-m", installer.ModelPath())
 	cmd.Dir = binDir
 	cmd.Stdout = io.Discard
-	cmd.Stderr = io.Discard
 	setProcessGroup(cmd)
+
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		return fmt.Errorf("stderr pipe: %w", err)
+	}
 
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("start whisper server: %w", err)
 	}
 
-	// Wait for port to be open
-	addr := "127.0.0.1:7465"
-	for i := 0; i < 120 && ctx.Err() == nil; i++ {
-		conn, err := net.DialTimeout("tcp", addr, 100*time.Millisecond)
-		if err == nil {
-			conn.Close()
-			break
+	// Wait for "listening on" message from whisper-server stderr
+	ready := make(chan struct{})
+	go func() {
+		scanner := bufio.NewScanner(stderr)
+		for scanner.Scan() {
+			if strings.Contains(scanner.Text(), "listening on") {
+				close(ready)
+				// Drain remaining stderr so the pipe doesn't block
+				io.Copy(io.Discard, stderr)
+				return
+			}
 		}
-		select {
-		case <-ctx.Done():
-		case <-time.After(500 * time.Millisecond):
-		}
-	}
+	}()
 
-	if ctx.Err() != nil {
+	select {
+	case <-ready:
+	case <-ctx.Done():
 		gracefulKill(cmd)
 		return nil
 	}
