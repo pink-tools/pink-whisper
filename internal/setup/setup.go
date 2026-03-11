@@ -1,4 +1,4 @@
-package installer
+package setup
 
 import (
 	"archive/tar"
@@ -29,7 +29,7 @@ type Dialog struct {
 	CancelButton  string `json:"cancel_button"`
 }
 
-type InstallInfo struct {
+type Info struct {
 	Ready       bool    `json:"ready"`
 	NeedConfirm bool    `json:"need_confirm"`
 	Dialog      *Dialog `json:"dialog,omitempty"`
@@ -38,9 +38,9 @@ type InstallInfo struct {
 	ModelSize   int64   `json:"model_size"`
 }
 
-func Check() InstallInfo {
+func Check() Info {
 	hw := hardware.Get()
-	info := InstallInfo{
+	info := Info{
 		Hardware:  string(hw),
 		Artifact:  hardware.ArtifactName(),
 		ModelSize: modelSize,
@@ -80,7 +80,7 @@ REMOTE SERVER (transcribe.pinkhaired.com):
 - Fast transcription (GPU accelerated)
 - No local installation needed
 - Works automatically with pink-transcriber`, hardware.Description()),
-			ConfirmButton: "Install locally",
+			ConfirmButton: "Set up locally",
 			CancelButton:  "Use remote (recommended)",
 		}
 	}
@@ -93,7 +93,7 @@ func ModelPath() string {
 	return filepath.Join(core.ServiceDir("pink-whisper"), "ggml-large-v3.bin")
 }
 
-func Install(info InstallInfo) error {
+func Run(info Info) error {
 	binDir := core.ServiceDir("pink-whisper")
 
 	fmt.Printf("Downloading %s...\n", info.Artifact)
@@ -121,7 +121,7 @@ func Install(info InstallInfo) error {
 		}
 	}
 
-	fmt.Println("Installed successfully")
+	fmt.Println("Setup complete")
 	return nil
 }
 

@@ -11,21 +11,21 @@ import (
 
 	"github.com/pink-tools/pink-core"
 	"github.com/pink-tools/pink-core/log"
-	"github.com/pink-tools/pink-whisper/internal/installer"
+	"github.com/pink-tools/pink-whisper/internal/setup"
 )
 
 func Run(ctx context.Context) error {
-	info := installer.Check()
+	info := setup.Check()
 	if !info.Ready {
-		return fmt.Errorf("not installed, run: pink-whisper install")
+		return fmt.Errorf("not set up, run: pink-whisper setup")
 	}
 
 	binDir := core.ServiceDir("pink-whisper")
-	binary := filepath.Join(binDir, installer.ServerBinaryName())
+	binary := filepath.Join(binDir, setup.ServerBinaryName())
 
 	killStaleServer()
 
-	cmd := exec.Command(binary, "-m", installer.ModelPath())
+	cmd := exec.Command(binary, "-m", setup.ModelPath())
 	cmd.Dir = binDir
 	cmd.Stdout = io.Discard
 	setProcessGroup(cmd)

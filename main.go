@@ -9,7 +9,7 @@ import (
 	"github.com/pink-tools/pink-core"
 	"github.com/pink-tools/pink-whisper/internal/daemon"
 	"github.com/pink-tools/pink-whisper/internal/hardware"
-	"github.com/pink-tools/pink-whisper/internal/installer"
+	"github.com/pink-tools/pink-whisper/internal/setup"
 )
 
 //go:embed context.md
@@ -31,9 +31,9 @@ func main() {
 				Desc: "Check server status",
 				Run:  cmdStatus,
 			},
-			"install": {
-				Desc: "Install whisper binary and model",
-				Run:  cmdInstall,
+			"setup": {
+				Desc: "Set up whisper binary and model",
+				Run:  cmdSetup,
 			},
 		},
 	}
@@ -54,7 +54,7 @@ func cmdStatus(args []string) error {
 	return nil
 }
 
-func cmdInstall(args []string) error {
+func cmdSetup(args []string) error {
 	if hasFlag(args, "--describe") {
 		return nil
 	}
@@ -62,7 +62,7 @@ func cmdInstall(args []string) error {
 	check := hasFlag(args, "--check")
 	yes := hasFlag(args, "--yes")
 
-	info := installer.Check()
+	info := setup.Check()
 
 	if check {
 		enc := json.NewEncoder(os.Stdout)
@@ -71,21 +71,21 @@ func cmdInstall(args []string) error {
 	}
 
 	if info.Ready {
-		fmt.Println("already installed")
+		fmt.Println("already set up")
 		return nil
 	}
 
 	if info.NeedConfirm && !yes {
-		if !confirmInstall(info) {
+		if !confirmSetup(info) {
 			fmt.Println("skipped")
 			return nil
 		}
 	}
 
-	return installer.Install(info)
+	return setup.Run(info)
 }
 
-func confirmInstall(info installer.InstallInfo) bool {
+func confirmSetup(info setup.Info) bool {
 	if info.Dialog == nil {
 		return true
 	}
