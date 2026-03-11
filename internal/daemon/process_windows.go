@@ -12,3 +12,7 @@ func gracefulKill(cmd *exec.Cmd) {
 	}
 	cmd.Process.Kill()
 }
+
+func killStaleServer() {
+	exec.Command("taskkill", "/F", "/IM", "whisper-server.exe").Run()
+}

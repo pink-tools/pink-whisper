@@ -23,6 +23,8 @@ func Run(ctx context.Context) error {
 	binDir := core.ServiceDir("pink-whisper")
 	binary := filepath.Join(binDir, installer.ServerBinaryName())
 
+	killStaleServer()
+
 	cmd := exec.Command(binary, "-m", installer.ModelPath())
 	cmd.Dir = binDir
 	cmd.Stdout = io.Discard
