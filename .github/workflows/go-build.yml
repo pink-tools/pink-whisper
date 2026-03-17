@@ -54,7 +54,7 @@ jobs:
           merge-multiple: true
 
       - name: Release
-        uses: softprops/action-gh-release@v3
+        uses: softprops/action-gh-release@v2
         with:
           name: pink-whisper ${{ github.ref_name }}
           files: dist/*
