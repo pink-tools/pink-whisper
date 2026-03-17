@@ -20,7 +20,7 @@ jobs:
     if: ${{ inputs.job == 'all' || inputs.job == 'linux-cpu' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           repository: ggml-org/whisper.cpp
 
@@ -46,7 +46,7 @@ jobs:
           cp build/bin/pink-whisper artifact/whisper-server
           chmod +x artifact/whisper-server
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: linux-amd64-cpu
           path: artifact/
@@ -64,7 +64,7 @@ jobs:
         with:
           swap-size-gb: 5
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           repository: ggml-org/whisper.cpp
 
@@ -96,7 +96,7 @@ jobs:
           cp /usr/local/cuda/lib64/libcublasLt.so.12 artifact/
           chmod +x artifact/whisper-server
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: linux-amd64-cuda
           path: artifact/
@@ -105,7 +105,7 @@ jobs:
     if: ${{ inputs.job == 'all' || inputs.job == 'windows-cpu' }}
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           repository: ggml-org/whisper.cpp
 
@@ -133,7 +133,7 @@ jobs:
           New-Item -ItemType Directory -Force -Path artifact
           Copy-Item build/bin/Release/pink-whisper.exe artifact/whisper-server.exe
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: windows-amd64-cpu
           path: artifact/
@@ -144,7 +144,7 @@ jobs:
     env:
       CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.4
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           repository: ggml-org/whisper.cpp
 
@@ -215,7 +215,7 @@ jobs:
           Copy-Item "$env:CUDA_PATH\bin\cublas64_12.dll" artifact/
           Copy-Item "$env:CUDA_PATH\bin\cublasLt64_12.dll" artifact/
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: windows-amd64-cuda
           path: artifact/
@@ -224,7 +224,7 @@ jobs:
     if: ${{ inputs.job == 'all' || inputs.job == 'macos-coreml' }}
     runs-on: macos-14
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           repository: ggml-org/whisper.cpp
 
@@ -264,7 +264,7 @@ jobs:
           chmod +x artifact/whisper-server
           codesign -s - --force artifact/whisper-server
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: darwin-arm64-coreml
           path: artifact/
@@ -277,7 +277,7 @@ jobs:
       - name: Install ffmpeg
         run: sudo apt-get update && sudo apt-get install -y ffmpeg
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v6
         with:
           name: linux-amd64-cpu
           path: artifact/
@@ -310,7 +310,7 @@ jobs:
       - name: Install ffmpeg
         run: choco install ffmpeg -y
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v6
         with:
           name: windows-amd64-cpu
           path: artifact/
@@ -364,7 +364,7 @@ jobs:
       - name: Install ffmpeg
         run: brew install ffmpeg
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v6
         with:
           name: darwin-arm64-coreml
           path: artifact/
@@ -396,9 +396,9 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v6
         with:
           path: artifacts
 
@@ -424,7 +424,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
 
       - name: Create release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: cpp-latest
           name: pink-whisper C++
