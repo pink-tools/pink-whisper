@@ -1,1 +1,8 @@
 build/
+ai-docs
+
+# Compiled binary (see Makefile)
+/pink-whisper
+
+# Whisper model (~3GB, downloaded at setup)
+ggml-large-v3.bin
